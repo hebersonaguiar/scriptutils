@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS items (
+    id INT AUTO_INCREMENT NOT NULL,
+    cpf VARCHAR(255),
+    firstname VARCHAR(255),
+    lastname VARCHAR(255),
+    login VARCHAR(255),
+    department VARCHAR(255),
+    rg VARCHAR(255),
+    room VARCHAR(255),
+    phone VARCHAR(255),
+    ticketid VARCHAR(255),
+    ticketnumber VARCHAR(255),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+)  ENGINE=INNODB;

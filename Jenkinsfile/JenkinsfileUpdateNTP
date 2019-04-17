@@ -1,0 +1,57 @@
+import groovy.sql.Sql
+
+node('master') {
+    stage('Git Pull - Puppet Server') {
+        sh "sshpass -p trs12we@ ssh -p 22 -o StrictHostKeyChecking=no root@172.16.1.22 'rm -rf /etc/puppetlabs/code/environments/production/modules/ntp/; git clone git@172.16.1.16:devops/puppet-ntp.git /etc/puppetlabs/code/environments/production/modules/ntp/'"
+    }
+
+    stage('SQL Execute') {
+
+        try {
+            def dbUrl = "jdbc:postgresql://172.16.1.22/foreman"
+            def dbUser = "haguiar"
+            def dbPassword = "123456"
+            def dbDriver = "org.postgresql.Driver"
+
+
+            def sql = Sql.newInstance(dbUrl, dbUser, dbPassword, dbDriver)
+            query = "SELECT \
+				  t4.ip AS ip\
+				FROM  hosts T1\
+					INNER JOIN host_classes T2 ON T2.host_id = T1.id\
+					INNER JOIN puppetclasses T3 ON T3.id = T2.puppetclass_id\
+					INNER JOIN nics T4 ON t4.host_id = T1.id \
+				WHERE t3.name LIKE '%ntp%' \
+					AND t4.ip NOTNULL \
+					AND t3.name NOTNULL"
+            def sqlresult = sql.rows(query)
+
+            println sqlresult
+
+            sh "echo ${sqlresult} > /tmp/test"
+
+            sql.close()
+            currentBuild.result = 'SUCCESS'
+        } catch (Exception err) {
+            currentBuild.result = 'SUCCESS'
+        }
+    }
+
+
+    stage('Execute Puppet Agent') {
+
+        def IP = sh(returnStdout: true, script: ''' cat /tmp/test | grep -w ip | awk -F : '{ print \$2 }' | cut -d] -f1 ''').split()
+
+        //echo "${IP[-1]} "
+
+        try {
+        	sh "sshpass -p trs12we@ ssh -o StrictHostKeyChecking=no root@${IP[-1]} puppet agent -t"
+        	currentBuild.result = 'SUCCESS'
+        }
+        catch(Exception e) {
+        	currentBuild.result = 'SUCCESS'        	
+        }
+
+    }
+}
+

@@ -1,0 +1,72 @@
+import groovy.sql.*
+
+node('master') {
+
+    stage('Check Tickets'){
+
+        try {
+
+            def database = 'otrs'
+            def hostdb   = '172.16.1.186'
+
+            withCredentials([
+                    usernamePassword(credentialsId: '670bf3e3-b9e7-4892-a7da-8062ed52830a', usernameVariable: 'OTRSUSER', passwordVariable: 'OTRSPASS'),
+                ]){
+                def sql = Sql.newInstance("jdbc:mysql://${hostdb}:3306/${database}", "$OTRSUSER","$OTRSPASS", "com.mysql.jdbc.Driver")
+                query = "SELECT TB1.id \
+                        FROM ticket TB1 \
+                        WHERE TB1.ticket_state_id = '4' \
+                        AND TIMESTAMPDIFF(SECOND,TB1.create_time, NOW()) < 180"     
+
+                def sqlresult = sql.rows(query)
+
+                println sqlresult
+
+                sh "echo ${sqlresult}  | tr -d {}[], > /tmp/ticketdb"
+
+                sql.close()
+            }
+            currentBuild.result = 'SUCCESS'
+        } catch(Exception e) {
+            currentBuild.result = 'SUCCESS'
+        }        
+    }
+
+    stage('Send Push Notification'){
+        sh """cat /tmp/ticketdb | grep id | awk '{gsub("id","\\n"); print}' | awk '{gsub(" ",""); print}' | awk 'NR!=1 {gsub(":",""); print}' > /tmp/ticketfile"""
+        sh "cat /tmp/ticketfile"
+        File file = new File("/tmp/ticketfile")
+        def lines = file.readLines()
+        isEmptyFile = lines.isEmpty()
+        if (isEmptyFile==false) {
+            readTickets(lines)            
+            currentBuild.result = 'SUCCESS'
+            cleanWs()
+        }else{
+            println "No open ticket"
+            cleanWs()
+        }
+    }
+}
+
+def readTickets(list) {
+    sh "echo Send Push Notification"
+    for (int i = 0; i < list.size(); i++) {
+        def json = """{
+                        "title": "Novo Chamado OTRS",
+                        "message": "Você tem um novo Chamado Ticket ID ${list[i]}",
+                        "url": "http://172.16.1.186/otrs/index.pl?Action=AgentTicketZoom;TicketID=${list[i]}",
+                        "ttl": 36000,
+                        "icon": "https://cdn3.iconfinder.com/data/icons/happy-x-mas/501/santa15-128.png",
+                        "badge": "https://cdn3.iconfinder.com/data/icons/happy-x-mas/501/santa15-128.png",
+                        "data":"Chamado OTRS Data",
+                        "tag": "Chamado OTRS TAG"
+                    }"""
+
+        // def push = ["curl", "-k", "-X", "POST", "-H", "Content-Type: application/json", "-d", "${json}", "http://172.17.10.17:3000/push"].execute().text
+
+        sh """ curl -X POST -H "Content-Type: application/json" -d '${json}' http://172.17.10.17:3000/push ; sleep 25"""
+
+    }
+}
+

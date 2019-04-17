@@ -1,0 +1,101 @@
+node('Build') {
+
+    // VARIAVEIS DE AMBEIENTE
+    def repositorio   = 'saped-service'
+    def servidor      = ''
+    def servidorip    = ''
+    def database_host = ''
+    def database_name = ''
+    def database_user = ''
+    def database_pass = ''
+    def url_app       = ''
+
+    // CLONE DO REPOSITORIO ONDE ESTA LOCALIZADO O docker-compose.yml CRIACAO DE PASTAS E COPIA DE ARQUIVOS
+    stage('Git Clone') {
+         withCredentials([
+            usernamePassword(credentialsId: '42d6571f-2e27-460b-a7ee-89778cba0327', usernameVariable: 'GITUSER', passwordVariable: 'GITPASS'),
+        ]){
+            sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor} 'git clone -b ${params.SAPED_SERVICE_TAG} http://$GITUSER:'$GITPASS'@gitlab.mme.gov.br/source/${repositorio}.git /srv/docker-compose/'"
+            sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'rm -rf /opt/registry/central-server-config' "
+            sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'mkdir -p /opt/registry/central-server-config' "
+            sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'cp /srv/docker-compose/docker/application.yml /srv/docker-compose/docker/saped.yml /opt/registry/central-server-config' "
+        }
+    }
+
+    // ALTERACACAO DAS VARIAVEIS NO docker-compose.yml
+    stage('Editando Variaveis') {
+        sh "ping ${database_host} -c1 | grep icmp_seq | awk -F \\( '{print \$2}' | awk -F \\) '{print \$1}' > /tmp/ipdb"
+        ipdb = readFile('/tmp/ipdb').trim()
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/SAPEDSERVICETAG/${params.SAPED_SERVICE_TAG}/g /srv/docker-compose/docker/docker-compose.yml'"
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/SAPEDWEBTAG/${params.SAPED_WEB_TAG}/g /srv/docker-compose/docker/docker-compose.yml'"
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/DBHOST/${database_host}/g /srv/docker-compose/docker/docker-compose.yml'"
+        // sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/DBNAME/${database_name}/g /srv/docker-compose/docker/docker-compose.yml'"
+        // sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/DBUSER/${database_user}/g /srv/docker-compose/docker/docker-compose.yml'"
+        // sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/DBPASS/${database_pass}/g /srv/docker-compose/docker/docker-compose.yml'"
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/VMHOST/${servidorip}/g /srv/docker-compose/docker/docker-compose.yml'"
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/DBIP/$ipdb/g /srv/docker-compose/docker/docker-compose.yml'"
+        // ALTERANDO ARQUIVO application.yml
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/VMHOST/${servidorip}/g /opt/registry/central-server-config/application.yml'"
+        // ALTERANDO ARQUIVO saped.yml
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/DBHOST/${database_host}/g /opt/registry/central-server-config/saped.yml'"
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/DBNAME/${database_name}/g /opt/registry/central-server-config/saped.yml'"
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/DBUSER/${database_user}/g /opt/registry/central-server-config/saped.yml'"
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/DBPASS/${database_pass}/g /opt/registry/central-server-config/saped.yml'"
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  'sed -i s/URLAPP/${url_app}/g /opt/registry/central-server-config/saped.yml'"
+        sh "rm -rf /tmp/ipdb"
+    }
+
+    // // REMOVE AMVBIENTE 
+    stage('Removendo Ambiente') {
+        input 'Deseja Remover o Ambiente?'
+        verificaDocker()
+    }
+
+    // INICIALIZACAO DO AMBIENTE
+    stage('Inicializando Ambiente') {
+        input 'Deseja Inicializar o Ambiente?'
+         withCredentials([
+            usernamePassword(credentialsId: 'b6630a8e-c12e-4010-9449-0554f841eee7', usernameVariable: 'HUBUSER', passwordVariable: 'HUBPASS'),
+        ]){
+            // LOGIN NO DOCKER REGISTRY
+            sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor} 'docker login -u $HUBUSER -p $HUBPASS srv099:8083'"
+        }
+        sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor} ' /usr/bin/docker-compose -f /srv/docker-compose/docker/docker-compose.yml up -d ; /usr/bin/docker-compose -f /srv/docker-compose/docker/docker-compose.yml ps > /tmp/ContainersRun ; cat /tmp/ContainersRun ;  rm -rf /srv/docker-compose ; rm -rf /tmp/ContainersRun'"
+        echo 'SAPED Iniciado, acesse em: http://sapedqld.mme.gov.br'
+        currentBuild.result = 'SUCCESS'
+    }
+}
+
+
+def verificaDocker(){
+
+    sh """ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@SRV095  '/usr/bin/docker ps -q | grep -E "([a-z]|[0-9])" && echo running > /tmp/result || echo stoped > /tmp/result'"""
+    sh "scp -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa  docker-user@SRV095:/tmp/result /tmp/result"
+    sh "echo running > /tmp/running"
+    sh "echo stoped > /tmp/stoped"
+
+    result = readFile('/tmp/result')
+    running = readFile('/tmp/running')
+    stoped = readFile('/tmp/stoped')
+
+     if ( result == running ) {
+            echo 'Parando Containers em Execução em SRV095... '
+            sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@SRV095  '/usr/bin/docker stop \$(docker ps -q)'"
+            removeAmbiente()
+            currentBuild.result = 'SUCCESS'           
+        } else {
+            echo 'Ambiente em SRV095 Esta Parado '
+            removeAmbiente()
+            currentBuild.result = 'SUCCESS'     
+        }
+}
+
+def removeAmbiente(){
+    def servidor      = 'SRV096'
+    echo 'Removendo Ambiente em SRV096... '
+    sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor}  docker images | grep saped | awk '{print \$1\":\"\$2}' > /tmp/images"
+    sh "scp -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa  /tmp/images docker-user@${servidor}:/tmp/images"
+    sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor} '/usr/bin/docker-compose -f /srv/docker-compose/docker/docker-compose.yml stop'"
+    sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor} '/usr/bin/docker-compose -f /srv/docker-compose/docker/docker-compose.yml rm -f'"
+    sh "ssh -o StrictHostKeyChecking=no -i ~/.certs-user/id_rsa docker-user@${servidor} 'if [[ -s /tmp/images ]]; then echo Contem Imagens && /usr/bin/docker rmi -f \$(cat /tmp/images) && rm -rf /tmp/images && rm -rf /tmp/checkimages && rm -rf /tmp/checkvazio; else echo Imagens nao existem && rm -rf /tmp/images && rm -rf /tmp/checkimages && rm -rf /tmp/checkvazio; fi'"
+}

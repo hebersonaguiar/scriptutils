@@ -1,0 +1,14 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-updateadcontrol
+  annotations:
+spec:
+  rules:
+  - host: updateadcontrol.mme.gov.br
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: updateadcontrol
+          servicePort: 5000

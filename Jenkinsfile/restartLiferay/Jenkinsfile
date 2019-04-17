@@ -1,0 +1,66 @@
+node('master') {
+    stage('Git Pull Script') {
+        git branch: 'master',
+        credentialsId: '3fb868ca-b81c-4f9d-b7a2-11016ad9e6b0',
+        url: 'http://172.16.1.16/devops/restartliferay.git'
+    }
+
+    stage('Exec Script')
+        withCredentials([
+            usernamePassword(credentialsId: '0f3079e8-8213-4bf2-8d28-7d086a3bc7b6', usernameVariable: 'ZABBIXU', passwordVariable: 'ZABBIXP')
+        ]){
+            sh "/usr/bin/python app.py $ZABBIXU $ZABBIXP > /tmp/problems"
+            sh "cat /tmp/problems"
+    }
+
+    stage('Restart Portal'){
+        //sh "cat /tmp/problems | grep -Ew '(Storage::Storage Netapp got Failed Disks|VPN::MME9910 - Serviço do Zabbix agent sem resposta a 15m)' && echo ok > /tmp/problemresult || echo error > /tmp/problemresult "
+        //sh "cat /tmp/problems | grep -Ew '(Acesso ao site http://srv155:8080)' && echo ok > /tmp/problemresult || echo error > /tmp/problemresult "
+        sh "cat /tmp/problems | grep -Ew '(^Acesso ao site http://www.mme.gov.br\$)' && echo ok > /tmp/problemresult || echo error > /tmp/problemresult "
+        sh "echo error > /tmp/checkerror"
+        sh "echo ok > /tmp/checkok"
+
+        result = readFile('/tmp/problemresult')
+        error = readFile('/tmp/checkerror')
+        ok = readFile('/tmp/checkok')
+
+
+        if ( result == ok ) {
+            echo 'Portal Down'
+
+            sh "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@srv154 '/usr/bin/systemctl stop liferay' "
+            // sh "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@srv155 '/bin/kill -9 \$(pgrep java)' "
+            sh "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@srv154 '/sbin/limpeza' "
+            sh "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@srv154 '/usr/bin/systemctl start liferay' "
+
+            notifyFailed()
+
+            sleep 180
+
+            cleanWs()
+
+            currentBuild.result = 'SUCCESS'
+        } else {
+            echo 'Problem Not Exist'          
+
+            sh "cat /tmp/problems"
+
+            cleanWs()
+
+            currentBuild.result = 'ABORTED'
+        }
+            
+    }
+}
+
+def notifyFailed() {
+  emailext (
+      mimeType: 'text/html',
+      subject: "Portal Reinciado: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+      body: """<p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'</p>
+        <p>Verifique o log do Job no link: &QUOT;<a href='http://srv099.mme.gov.br:8088/view/SCRIPTS/job/Restart%20Portal/${env.BUILD_NUMBER}/console'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>&QUOT;</p>""",
+      to: "heberson.aguiar@mme.gov.br;edmundo.braga@mme.gov.br;felipe.kede@mme.gov.br;leonardo.morato@mme.gov.br;suzane.silva@mme.gov.br;lucas.sousa@mme.gov.br",
+      from: "rede@mme.gov.br"    
+      )
+}
+

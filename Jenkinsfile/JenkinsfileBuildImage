@@ -1,0 +1,56 @@
+node('Build') {
+  
+    // VARIAVEIS DE AMBIENTE
+    def repositorio = 'saped-web'
+    def imagem      = 'saped-web'
+    def ambiente    = 'saped-web-snapshot'
+
+    // GIT CLONE DO REPSITORIO ONDE CONTEM O Dockerfile
+    stage('Git Clone') { 
+        checkout scm: [$class: 'GitSCM', 
+        userRemoteConfigs: [[credentialsId: '239ea6fe-6c41-46a0-8342-9954db6298dd', url: "http://gitlab.mme.gov.br/source/${repositorio}.git" ]], 
+        branches: [[name: "refs/tags/${params.Tag}"]]], changelog: false, poll: false
+    }
+
+    // VERIFICA SE CONTEM A IMAGEM 
+    stage('Docker Build'){
+        sh "/usr/bin/docker images | awk 'NR!=1 {print \$1\":\"\$2}' | grep -w '${imagem}:${params.Tag}' && echo Error > /tmp/checkimage || echo OK > /tmp/checkimage"
+        sh "echo OK > /tmp/checkok"
+        sh "echo Error > /tmp/checkerror"
+        
+        result = readFile('/tmp/checkimage')
+        ok = readFile('/tmp/checkok')
+        error = readFile('/tmp/checkerror')
+        
+        if ( result == error ) {
+            echo 'Image exists'
+            sh "rm -rf /tmp/check*"
+            cleanWs()
+            currentBuild.result = 'FAILURE'
+        } else {
+            // REALIZA O BUILD DA IMAGEM
+            echo 'Image does not exist, creating image'
+            sh "wget http://srv099:8081/repository/mme-mvn-releases/sistemas-mme/${ambiente}/${params.Tag}/${ambiente}-${params.Tag}.tar.gz -O ./docker/cliente.tar.gz"
+            // sh "sed -i 's/'TAG'/${params.Tag}/g' ./docker/Dockerfile"
+            // sh "sed -i 's/'SISTEMA'/${ambiente}/g' ./docker/Dockerfile"
+            docker.build("srv099:8083/${imagem}:${params.Tag}", "-f ./docker/Dockerfile ./docker")
+            sh "rm -rf /tmp/check*"
+        }
+    }
+    
+    // ENVIA A IMAGEM PARA O DOCKER REGISTRY
+    stage('Push Image'){
+        echo "Push Image srv099:8083/${imagem}:${params.Tag}"
+            withDockerRegistry([ credentialsId: "b6630a8e-c12e-4010-9449-0554f841eee7", url: "http://srv099:8083" ]) {
+            sh "docker push srv099:8083/${imagem}:${params.Tag}"
+            cleanWs()
+        }
+    }
+    
+    // REMOVE TOADAS AS IMAGES
+    stage('Remove Imagens'){
+        echo "Removendo imagens"
+        sh "docker rmi -f  \$(docker images | awk 'NR!=1 {print \$1\":\"\$2}')"
+        currentBuild.result = 'SUCCESS'
+    }
+}

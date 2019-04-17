@@ -1,0 +1,31 @@
+node('Build') {
+
+	def folder = '/srv/ftp-dnpm/DadosMinerarios'
+    
+   	// REMOVE DIRETÓRIO
+    stage('Remove Dir'){
+        res = sh(script: "test -d ${folder} && echo '1' || echo '0' ", returnStdout: true).trim()
+        if(res=='1'){
+            sh "rm -rf /srv/ftp-dnpm/DadosMinerarios"
+            currentBuild.result = 'SUCCESS'
+        } else {
+            echo 'Diretório nao existe, script em continuacao'
+            currentBuild.result = 'SUCCESS'
+        }
+    }
+
+    // REALIZA O DOWNLOAD DOS ARQUIVOS DO FTP DNPM
+    stage('Wget DNPM') {
+         withCredentials([
+            usernamePassword(credentialsId: '7f9f87a5-5852-4426-aaba-11d61c190160', usernameVariable: 'FTPUSER', passwordVariable: 'FTPPASS'),
+        ]){            
+            sh "wget -r --user=$FTPUSER --password='$FTPPASS' --no-parent ftp://ftp.dnpm.gov.br -P /srv/ftp-dnpm"
+        }
+    }
+
+    // MOVENDO E REMOVENDO DIRETÓRIOS
+    stage('Move/Remove') {
+        sh "mv /srv/ftp-dnpm/ftp.dnpm.gov.br/* /srv/ftp-dnpm/"
+        sh "rmdir /srv/ftp-dnpm/ftp.dnpm.gov.br"
+    }
+}

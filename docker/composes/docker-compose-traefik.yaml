@@ -1,0 +1,31 @@
+version: '3.1'
+
+services:
+
+  traefik:
+    image: traefik
+    hostname: traefik
+    container_name: traefik
+    command: --docker
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/traefik/traefik.toml:/traefik.toml
+      - /opt/traefik/acme.json:/acme.json
+    labels:
+      - traefik.enable=true
+      - traefik.frontend.rule=Host:srv017.mme.gov.br,traefik.mme.gov.br
+      - traefik.port=8083
+    networks:
+      front:
+        ipv4_address: 172.36.238.2
+
+networks:
+    front:
+        driver: bridge
+        ipam:
+            driver: default
+            config:
+                - subnet: 172.36.238.0/24

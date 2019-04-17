@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: updatead
+  name: updatead
+spec:
+  ports:
+  - port: 5000
+    targetPort: 5000
+  selector:
+    app: updatead

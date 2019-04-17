@@ -1,0 +1,73 @@
+version: '3.1'
+
+services:
+
+  redmine:
+    image: sameersbn/redmine:4.0.0-3
+    hostname: redmine
+    container_name: redmine
+    external_links:
+      - mysql:mysql
+    ports:
+    - 80
+    labels:
+      - traefik.enabled=true
+      - traefik.backend=redmine
+      - traefik.frontend.passHostHeader=true
+      - traefik.frontend.rule=Host:redmine.mme.gov.br;Path:/redmine
+      - traefik.docker.network=composes_front
+      - traefik.port=80
+    environment:
+    - America/Sao_Paulo
+
+    - DB_ADAPTER=mysql2
+    - DB_HOST=mysql
+    - DB_PORT=3306
+    - DB_USER=root
+    - DB_PASS=71UjqFIgyzEG
+    - DB_NAME=redmine
+
+    - REDMINE_PORT=10083
+    - REDMINE_HTTPS=false
+    - REDMINE_RELATIVE_URL_ROOT=/redmine
+    - REDMINE_SECRET_TOKEN=
+
+    - REDMINE_SUDO_MODE_ENABLED=false
+    - REDMINE_SUDO_MODE_TIMEOUT=15
+
+    - REDMINE_CONCURRENT_UPLOADS=2
+
+    - REDMINE_BACKUP_SCHEDULE=
+    - REDMINE_BACKUP_EXPIRY=
+    - REDMINE_BACKUP_TIME=
+
+    - SMTP_ENABLED=false
+    - SMTP_METHOD=smtp
+    - SMTP_DOMAIN=www.example.com
+    - SMTP_HOST=smtp.gmail.com
+    - SMTP_PORT=587
+    - SMTP_USER=mailer@example.com
+    - SMTP_PASS=password
+    - SMTP_STARTTLS=true
+    - SMTP_AUTHENTICATION=:login
+
+    - IMAP_ENABLED=false
+    - IMAP_HOST=imap.gmail.com
+    - IMAP_PORT=993
+    - IMAP_USER=mailer@example.com
+    - IMAP_PASS=password
+    - IMAP_SSL=true
+    - IMAP_INTERVAL=30
+    volumes:
+    - /opt/redmine/:/home/redmine/data
+    networks:
+      front:
+        ipv4_address: 172.36.238.12
+
+networks:
+    front:
+        driver: bridge
+        ipam:
+            driver: default
+            config:
+                - subnet: 172.36.238.0/24

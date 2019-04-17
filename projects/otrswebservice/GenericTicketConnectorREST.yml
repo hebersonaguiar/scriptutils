@@ -1,0 +1,64 @@
+---
+Debugger:
+  DebugThreshold: debug
+  TestMode: '0'
+Description: WebService para abertura de chamado.
+FrameworkVersion: 5.0.30
+Provider:
+  Operation:
+    Session:
+      Description: ''
+      MappingInbound:
+        Type: Simple
+      MappingOutbound:
+        Type: Simple
+      Type: Session::SessionCreate
+    Ticket:
+      Description: ''
+      MappingInbound:
+        Type: Simple
+      MappingOutbound:
+        Type: Simple
+      Type: Ticket::TicketCreate
+    TicketGet:
+      Description: ''
+      MappingInbound:
+        Type: Simple
+      MappingOutbound:
+        Type: Simple
+      Type: Ticket::TicketGet
+    TicketSearch:
+      Description: ''
+      MappingInbound:
+        Type: Simple
+      MappingOutbound:
+        Type: Simple
+      Type: Ticket::TicketSearch
+    TicketUpdate:
+      Description: ''
+      MappingInbound:
+        Type: Simple
+      MappingOutbound:
+        Type: Simple
+      Type: Ticket::TicketUpdate
+  Transport:
+    Config:
+      KeepAlive: ''
+      MaxLength: '10000000'
+      RouteOperationMapping:
+        Session:
+          Route: /Session
+        Ticket:
+          Route: /Ticket
+        TicketGet:
+          Route: /Ticket
+        TicketSearch:
+          Route: /Ticket
+        TicketUpdate:
+          Route: /Ticket/:TicketID
+    Type: HTTP::REST
+RemoteSystem: ''
+Requester:
+  Transport:
+    Type: ''
+

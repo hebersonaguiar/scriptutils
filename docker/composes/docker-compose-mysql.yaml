@@ -1,0 +1,28 @@
+version: '3.1'
+
+services:
+
+  mysql:
+    container_name: mysql
+    hostname: mysql
+    image: mysql:5.7
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 71UjqFIgyzEG
+    ports:
+    - "3306:3306"
+    volumes:
+    - /opt/mysql/:/var/lib/mysql
+    networks:
+      front:
+        ipv4_address: 172.36.238.10
+
+
+networks:
+    front:
+        driver: bridge
+        ipam:
+            driver: default
+            config:
+                - subnet: 172.36.238.0/24

@@ -1,0 +1,53 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: ocr-server
+  namespace: production
+  labels:
+    app: ocr-server
+    app: prod
+spec:
+  replicas: 3
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: ocr-server
+      app: prod
+  template:
+    metadata:
+      labels:
+        app: ocr-server
+        app: prod
+    spec:
+      containers:
+      - name: ocr-server
+        image:  guilhermeadc/ocr-server:latest
+        imagePullPolicy: Always
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "ps aux | grep ocr > /usr/share/message"]
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "ps aux | grep ocr | grep pdf > /usr/share/message"]
+        volumeMounts:
+        - mountPath: /var/ocr-server
+          name: volocr
+        resources:
+          limits:
+            memory: 2Gi
+            cpu: "2"
+          requests:
+            memory: 1Gi
+            cpu: "1"
+      nodeSelector:
+        app: prod
+      volumes:
+        - name: volocr
+          persistentVolumeClaim:
+             claimName: pvc-ocr
+      terminationGracePeriodSeconds: 120

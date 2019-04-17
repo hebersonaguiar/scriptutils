@@ -1,0 +1,56 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: updatead
+  namespace: production
+  labels:
+    app: updatead
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate  
+  selector:
+    matchLabels:
+      app: updatead
+  template:
+    metadata:
+      labels:
+        app: updatead
+    spec:
+      hostname: updatead
+      containers:
+      - name: updatead
+        image: hebersonaguiar/updatead:latest
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 2Gi
+            cpu: "2"
+          requests:
+            memory: 2Gi
+            cpu: "1"
+        env:
+        - name: MYSQL_PASS
+          value: 71UjqFIgyzEG
+        - name: MYSQL_HOST
+          value: mysql
+        - name: MYSQL_USER
+          value: root
+        - name: MYSQL_DB
+          value: updatead
+        - name: AD_SERVER
+          value: SRV001
+        - name: USER_SVC
+          value: Heberson Aguiar
+        - name: PASS_SVC
+          value: Engenharia#020588
+        - name: API_DB
+          value: updateadcontrol.mme.gov.br
+        securityContext:
+          privileged: true
+      nodeSelector:
+        app: prod
+

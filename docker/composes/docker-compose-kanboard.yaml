@@ -1,0 +1,38 @@
+version: '3.1'
+
+services:
+
+  kanboard:
+    image: hebersonaguiar/kanboard:latest
+    hostname: kanboard
+    container_name: kanboard
+    environment:
+      DB_DRIVER: mysql
+      DB_USERNAME: root
+      DB_PASSWORD: 71UjqFIgyzEG
+      DB_HOSTNAME: mysql
+      DB_NAME: kanboard
+    external_links:
+      - mysql:mysql
+    ports:
+    - 80
+    labels:
+      - traefik.enabled=true
+      - traefik.backend=kanboard
+      - traefik.frontend.passHostHeader=true
+      - traefik.frontend.rule=Host:kanboard.mme.gov.br
+      - traefik.docker.network=composes_front
+      - traefik.port=80
+    volumes:
+      - /opt/kanboard:/var/www/html
+    networks:
+      front:
+        ipv4_address: 172.36.238.13
+
+networks:
+    front:
+        driver: bridge
+        ipam:
+            driver: default
+            config:
+                - subnet: 172.36.238.0/24

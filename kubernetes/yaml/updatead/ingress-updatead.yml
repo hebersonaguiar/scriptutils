@@ -1,0 +1,14 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-updatead
+  annotations:
+spec:
+  rules:
+  - host: updatead.mme.gov.br
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: updatead
+          servicePort: 5000

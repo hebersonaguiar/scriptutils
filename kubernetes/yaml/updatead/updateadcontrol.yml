@@ -1,0 +1,87 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: updateadcontrol
+  namespace: production
+  labels:
+    app: updateadcontrol
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate  
+  selector:
+    matchLabels:
+      app: updateadcontrol
+  template:
+    metadata:
+      labels:
+        app: updateadcontrol
+    spec:
+      hostname: updateadcontrol
+      containers:
+      - name: updateadcontrol
+        image: hebersonaguiar/updateadcontrol:latest
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 2Gi
+            cpu: "2"
+          requests:
+            memory: 2Gi
+            cpu: "1"
+#        ports:
+#        - containerPort: 5000
+#          name: updateadcontrol
+#          protocol: TCP
+        env:
+        - name: MYSQL_PASS
+          value: 71UjqFIgyzEG
+        - name: MYSQL_HOST
+          value: mysql
+        - name: MYSQL_USER
+          value: root
+        - name: MYSQL_DB
+          value: updateadcontrol
+        - name: AD_SERVER
+          value: SRV001
+        - name: USER_SVC
+          value: Heberson Aguiar
+        - name: PASS_SVC
+          value: Engenharia#020588
+        securityContext:
+          privileged: true
+      nodeSelector:
+        app: prod
+
+#---
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  labels:
+#    app: updateadcontrol
+#  name: updateadcontrol
+#spec:
+#  ports:
+#  - port: 5000
+#    targetPort: 5000
+#  selector:
+#    app: updateadcontrol
+
+#---
+#apiVersion: extensions/v1beta1
+#kind: Ingress
+#metadata:
+#  labels:
+#    cattle.io/creator: norman
+#  name: ingress-updateadcontrol
+#spec:
+#  rules:
+#  - host: updateadcontrol.mme.gov.br
+#    http:
+#      paths:
+#      - backend:
+#          serviceName: updateadcontrol
+#          servicePort: 5000
