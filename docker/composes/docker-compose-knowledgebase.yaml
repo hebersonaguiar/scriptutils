@@ -13,13 +13,13 @@ services:
     environment:
       WORDPRESS_DB_HOST: mysql
       WORDPRESS_DB_USER: root
-      WORDPRESS_DB_PASSWORD: 71UjqFIgyzEG
+      WORDPRESS_DB_PASSWORD: 
       WORDPRESS_DB_NAME: knowledgebase 
       WORDPRESS_TABLE_PREFIX: kb_
     labels:
       - traefik.enabled=true
       - traefik.backend=baseconhecimento
-      - traefik.frontend.rule=Host:baseconhecimento.mme.gov.br
+      - traefik.frontend.rule=Host:baseconhecimento
       - traefik.docker.network=composes_front
       - traefik.port=80
     external_links:

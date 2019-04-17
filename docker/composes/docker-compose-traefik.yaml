@@ -16,7 +16,7 @@ services:
       - /opt/traefik/acme.json:/acme.json
     labels:
       - traefik.enable=true
-      - traefik.frontend.rule=Host:srv017.mme.gov.br,traefik.mme.gov.br
+      - traefik.frontend.rule=Host:
       - traefik.port=8083
     networks:
       front:

@@ -14,7 +14,7 @@ services:
       - traefik.enabled=true
       - traefik.backend=redmine
       - traefik.frontend.passHostHeader=true
-      - traefik.frontend.rule=Host:redmine.mme.gov.br;Path:/redmine
+      - traefik.frontend.rule=Host:redmine
       - traefik.docker.network=composes_front
       - traefik.port=80
     environment:
@@ -24,7 +24,7 @@ services:
     - DB_HOST=mysql
     - DB_PORT=3306
     - DB_USER=root
-    - DB_PASS=71UjqFIgyzEG
+    - DB_PASS=
     - DB_NAME=redmine
 
     - REDMINE_PORT=10083

@@ -9,7 +9,7 @@ services:
     environment:
       DB_DRIVER: mysql
       DB_USERNAME: root
-      DB_PASSWORD: 71UjqFIgyzEG
+      DB_PASSWORD: 
       DB_HOSTNAME: mysql
       DB_NAME: kanboard
     external_links:
@@ -20,7 +20,7 @@ services:
       - traefik.enabled=true
       - traefik.backend=kanboard
       - traefik.frontend.passHostHeader=true
-      - traefik.frontend.rule=Host:kanboard.mme.gov.br
+      - traefik.frontend.rule=Host:kanboard
       - traefik.docker.network=composes_front
       - traefik.port=80
     volumes:
